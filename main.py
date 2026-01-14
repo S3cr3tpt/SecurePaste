@@ -16,7 +16,7 @@ VALID_ADMIN_TOKENS = set()
 
 print("--- SYSTEM: Script Loaded ---")  # DEBUG LINE 1
 
-# --- DATABASE SETUP (MOVED TO LIFESPAN) ---
+# --- DATABASE SETUP  ---
 def init_db():
     print(f"--- SYSTEM: Connecting to {DB_NAME}... ---") # DEBUG LINE 2
     try:
@@ -30,13 +30,13 @@ def init_db():
     except Exception as e:
         print(f"!!! CRITICAL ERROR: Database Failed: {e}")
 
-# --- LIFESPAN MANAGER (The Fix) ---
+# --- LIFESPAN MANAGER ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup logic
     init_db()
     yield
-    # Shutdown logic (optional)
+    # Shutdown logi
     print("--- SYSTEM: Shutting Down ---")
 
 app = FastAPI(lifespan=lifespan)
