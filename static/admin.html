@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Network Monitor</title>
+    <style>
+        body { background: #000; color: #ff0000; font-family: 'Consolas', monospace; padding: 20px; }
+        h1 { border-bottom: 2px solid #ff0000; display: flex; justify-content: space-between; align-items: center; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+        th, td { border: 1px solid #333; padding: 10px; text-align: left; }
+        th { color: #fff; background: #222; }
+        .secure { color: #0f0; } 
+        
+        /* LOGIN MODAL STYLES */
+        #login-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:#000; display:flex; justify-content:center; align-items:center; z-index:999; }
+        .login-box { border: 2px solid #ff0000; padding: 30px; text-align: center; }
+        input { background: #111; border: 1px solid #444; color: #fff; padding: 10px; margin: 10px 0; display: block; width: 200px; font-family: inherit; }
+        button { background: #ff0000; color: #000; border: none; padding: 10px 20px; font-weight: bold; cursor: pointer; }
+        button:hover { background: #cc0000; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div id="login-overlay">
+        <div class="login-box">
+            <h2>[ CLASSIFIED ACCESS ]</h2>
+            <input type="text" id="username" placeholder="Username">
+            <input type="password" id="password" placeholder="Password">
+            <button onclick="attemptLogin()">AUTHENTICATE</button>
+            <p id="error-msg" style="color:red; display:none;">ACCESS DENIED</p>
+        </div>
+    </div>
+
+    <div id="dashboard" class="hidden">
+        <h1>
+            [ NETWORK MONITOR :: SECURE LINK ]
+            <button onclick="logout()" style="background:#333; color:#fff; border:1px solid #555;">LOGOUT</button>
+        </h1>
+        
+        <p style="border: 1px solid #555; padding: 10px; background: #111;">
+            <strong>SECURITY PROTOCOL ACTIVE:</strong> Switching tabs or closing this window will immediately terminate the session.
+        </p>
+
+        <h2>ACTIVE ENCRYPTED CHATS</h2>
+        <table id="chat-table">
+            <thead><tr><th>Room ID (Hash)</th><th>Users</th><th>Duration</th><th>Status</th></tr></thead>
+            <tbody></tbody>
+        </table>
+
+        <h2>ACTIVE DATA SILOS (PASTES)</h2>
+        <table id="paste-table">
+            <thead><tr><th>Paste ID</th><th>Life Expectancy</th><th>Created At</th><th>Content</th></tr></thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+        // RAM-ONLY TOKEN STORAGE (Dies on refresh/close)
+        let authToken = null;
+        let refreshInterval = null;
+
+        async function attemptLogin() {
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+
+            try {
+                const res = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: u, password: p })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    authToken = data.token; // Save Token in RAM
+                    
+                    // Show Dashboard
+                    document.getElementById('login-overlay').classList.add('hidden');
+                    document.getElementById('dashboard').classList.remove('hidden');
+                    
+                    // Start Data Fetching
+                    fetchStats();
+                    refreshInterval = setInterval(fetchStats, 2000);
+                } else {
+                    document.getElementById('error-msg').style.display = 'block';
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function fetchStats() {
+            if (!authToken) return; // Stop if no token
+
+            const res = await fetch('/api/admin/stats', {
+                headers: { 'x-admin-token': authToken }
+            });
+
+            if (res.status === 401) {
+                logout(); // Token expired or invalid
+                return;
+            }
+
+            const data = await res.json();
+
+            // Render Chats
+            const chatBody = document.querySelector('#chat-table tbody');
+            chatBody.innerHTML = '';
+            data.chats.forEach(chat => {
+                chatBody.innerHTML += `<tr><td>${chat.room_id}</td><td>${chat.users}/2</td><td>${chat.duration}</td><td class="secure">ENCRYPTED</td></tr>`;
+            });
+
+            // Render Pastes
+            const pasteBody = document.querySelector('#paste-table tbody');
+            pasteBody.innerHTML = '';
+            data.pastes.forEach(paste => {
+                pasteBody.innerHTML += `<tr><td>${paste.id}</td><td>${paste.views}</td><td>${paste.created_at}</td><td class="secure">NO ACCESS</td></tr>`;
+            });
+        }
+        
+        function logout() {
+            authToken = null;
+            clearInterval(refreshInterval);
+            document.getElementById('dashboard').classList.add('hidden');
+            document.getElementById('login-overlay').classList.remove('hidden');
+            document.getElementById('password').value = ""; // Clear password input
+            document.getElementById('error-msg').style.display = 'none';
+        }
+
+        // --- THE PARANOID SECURITY FEATURE ---
+        // If user switches tabs (visibilityState becomes 'hidden'), logout immediately.
+        document.addEventListener("visibilitychange", () => {
+            if (document.hidden && authToken) {
+                console.log("Security Protocol: Tab switched. Terminating session.");
+                logout();
+            }
+        });
+    </script>
+</body>
+</html>

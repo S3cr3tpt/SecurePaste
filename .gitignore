@@ -1,0 +1,9 @@
+Project.docx
+1uml.png
+pastes.db
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+venv/
+.vscode/
