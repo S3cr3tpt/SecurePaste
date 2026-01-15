@@ -6,11 +6,6 @@
 
 Unlike traditional pastebins, the server is architected as a **Blind Relay**. It stores ciphertext but never receives the decryption key. Keys are generated client-side and passed via the URL fragment (`#`), ensuring they never touch the network stack.
 
-## 🏗️ Architecture
-
-![System Architecture](1uml.png)
-*(Client-side encryption flow ensuring the server remains blind to the payload)*
-
 ## 🛡️ Key Features
 
 * **Zero-Knowledge Encryption:** AES-GCM-256 encryption happens entirely in the browser (WebCrypto API).
